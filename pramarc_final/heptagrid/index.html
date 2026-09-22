@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PRAMARC · Shadow Execution Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg-0: #0a0a0a;
+    --bg-1: #111111;
+    --bg-2: #191919;
+    --bg-3: #222222;
+    --bg-4: #2c2c2c;
+    --border: rgba(255,255,255,0.07);
+    --border-hi: rgba(255,255,255,0.12);
+
+    --orange-core: #f97316;
+    --orange-dim:  #c2550f;
+    --orange-hi:   #fb923c;
+    --orange-glow: rgba(249,115,22,0.15);
+    --orange-glow-hi: rgba(249,115,22,0.28);
+
+    --text-0: #f0ede8;
+    --text-1: #a8a29e;
+    --text-2: #6b6460;
+
+    --green:  #22c55e;
+    --red:    #ef4444;
+    --yellow: #eab308;
+    --blue:   #60a5fa;
+
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg-0);
+    color: var(--text-0);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 48px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-mark {
+    width: 26px; height: 26px;
+    background: var(--orange-core);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-mark svg { width: 14px; height: 14px; fill: #000; }
+  .product-name {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--text-0);
+  }
+  .product-sub {
+    font-size: 10px;
+    color: var(--text-2);
+    letter-spacing: 0.04em;
+  }
+  .topbar-divider { width: 1px; height: 20px; background: var(--border-hi); }
+  .role-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--orange-core);
+    background: var(--orange-glow);
+    border: 1px solid rgba(249,115,22,0.25);
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .live-pill {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--green);
+    letter-spacing: 0.06em;
+  }
+  .live-dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  .tick-counter {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-2);
+  }
+  .tick-counter span { color: var(--text-1); font-weight: 500; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--bg-1);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+    overflow-y: auto;
+  }
+  .nav-section-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-2);
+    padding: 0 16px 8px;
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+    font-size: 12px;
+    color: var(--text-1);
+    font-weight: 400;
+  }
+  .nav-item:hover { background: var(--bg-2); color: var(--text-0); }
+  .nav-item.active {
+    background: var(--orange-glow);
+    border-left-color: var(--orange-core);
+    color: var(--orange-hi);
+  }
+  .nav-icon {
+    width: 15px; height: 15px;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .nav-item.active .nav-icon { opacity: 1; }
+  .nav-badge {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 9px;
+    background: var(--bg-4);
+    color: var(--text-1);
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+  .nav-badge.alert {
+    background: rgba(239,68,68,0.15);
+    color: var(--red);
+  }
+  .nav-badge.orange {
+    background: var(--orange-glow);
+    color: var(--orange-hi);
+  }
+
+  .sidebar-spacer { flex: 1; }
+  .system-info {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .sysinfo-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-2);
+    margin-bottom: 3px;
+  }
+  .sysinfo-row span:last-child { color: var(--text-1); font-family: var(--mono); }
+
+  /* ── Main area ── */
+  .main {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+  }
+
+  /* ── Section header ── */
+  .section-header {
+    padding: 14px 20px 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-0);
+    letter-spacing: -0.01em;
+  }
+  .section-desc {
+    font-size: 11px;
+    color: var(--text-2);
+    margin-top: 1px;
+  }
+  .header-controls {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .ctrl-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border-hi);
+    background: var(--bg-2);
+    color: var(--text-1);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+  .ctrl-btn:hover { background: var(--bg-3); color: var(--text-0); border-color: var(--border-hi); }
+  .ctrl-btn.primary {
+    background: var(--orange-core);
+    color: #000;
+    border-color: transparent;
+    font-weight: 500;
+  }
+  .ctrl-btn.primary:hover { background: var(--orange-hi); }
+
+  /* ── Content grid ── */
+  .content {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto auto 1fr;
+    gap: 12px;
+    padding: 14px 20px 20px;
+    overflow: hidden;
+  }
+
+  /* ── Stat row ── */
+  .stat-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+  }
+  .stat-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card.highlight {
+    border-color: rgba(249,115,22,0.3);
+    background: linear-gradient(135deg, var(--bg-1), rgba(249,115,22,0.04));
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-2);
+    letter-spacing: 0.03em;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text-0);
+    line-height: 1;
+  }
+  .stat-value.orange { color: var(--orange-core); }
+  .stat-value.green  { color: var(--green); }
+  .stat-value.red    { color: var(--red); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-sub {
+    font-size: 9px;
+    color: var(--text-2);
+    margin-top: 4px;
+    font-family: var(--mono);
+  }
+  .stat-sub .up { color: var(--green); }
+  .stat-sub .dn { color: var(--red); }
+
+  /* ── Left panel (simulation + agents) ── */
+  .left-panel {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 12px;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* ── Agent table ── */
+  .panel {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-1);
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .panel-title-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--orange-core);
+    flex-shrink: 0;
+  }
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .panel-body::-webkit-scrollbar { width: 3px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 4px; }
+
+  /* ── Agent rows ── */
+  .agent-table { width: 100%; border-collapse: collapse; }
+  .agent-table th {
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--text-2);
+    text-align: left;
+    padding: 6px 14px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--bg-0);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .agent-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .agent-table tr:last-child td { border-bottom: none; }
+  .agent-table tr:hover td { background: var(--bg-2); }
+  .agent-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-0);
+  }
+
+  /* Status chip */
+  .status-chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+  .chip-running   { background: rgba(249,115,22,0.14); color: var(--orange-hi); border: 1px solid rgba(249,115,22,0.25); }
+  .chip-done      { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+  .chip-waiting   { background: rgba(234,179,8,0.12); color: var(--yellow); border: 1px solid rgba(234,179,8,0.2); }
+  .chip-failed    { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+
+  /* Lock chip */
+  .lock-chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+  }
+  .lock-hard  { background: rgba(239,68,68,0.1); color: #f87171; }
+  .lock-soft  { background: rgba(249,115,22,0.12); color: var(--orange-hi); }
+  .lock-watch { background: rgba(96,165,250,0.1); color: var(--blue); }
+  .lock-none  { color: var(--text-2); font-size: 9px; }
+
+  /* Progress bar */
+  .prog-bar {
+    height: 3px;
+    background: var(--bg-4);
+    border-radius: 2px;
+    overflow: hidden;
+    width: 60px;
+  }
+  .prog-fill {
+    height: 100%;
+    background: var(--orange-core);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+  .prog-fill.green-fill { background: var(--green); }
+  .prog-fill.yellow-fill { background: var(--yellow); }
+
+  /* Priority ring */
+  .prio-val {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-1);
+  }
+  .resource-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-2);
+    background: var(--bg-3);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  /* ── Right panel ── */
+  .right-panel {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 12px;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* ── Conflict log ── */
+  .log-panel {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+  }
+  .log-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+  }
+  .log-body::-webkit-scrollbar { width: 3px; }
+  .log-body::-webkit-scrollbar-track { background: transparent; }
+  .log-body::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 4px; }
+  .log-entry {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 1.45;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-time {
+    color: var(--text-2);
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .log-type {
+    flex-shrink: 0;
+    font-weight: 500;
+    padding-top: 1px;
+  }
+  .log-conflict { color: var(--orange-core); }
+  .log-degraded { color: var(--yellow); }
+  .log-starvation { color: var(--blue); }
+  .log-checkpoint { color: #a78bfa; }
+  .log-msg { color: var(--text-1); }
+
+  /* ── Metric comparison ── */
+  .metric-panel {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .metric-row:last-child { margin-bottom: 0; }
+  .metric-name {
+    font-size: 11px;
+    color: var(--text-1);
+  }
+  .metric-pair {
+    display: flex;
+    gap: 16px;
+  }
+  .metric-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+  }
+  .metric-label-sm {
+    font-size: 9px;
+    color: var(--text-2);
+    margin-bottom: 1px;
+  }
+  .bar-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .bar-side { }
+  .bar-side-label { font-size: 9px; color: var(--text-2); margin-bottom: 4px; font-family: var(--mono); }
+  .bar-track {
+    height: 6px;
+    background: var(--bg-3);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+  }
+  .bar-fill.bad   { background: var(--red); }
+  .bar-fill.good  { background: var(--orange-core); }
+  .bar-caption {
+    font-family: var(--mono);
+    font-size: 10px;
+    margin-top: 3px;
+  }
+
+  /* ── Shadow sim viz ── */
+  .shadow-viz {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .shadow-grid {
+    display: grid;
+    grid-template-columns: 70px repeat(5, 1fr);
+    gap: 3px;
+    margin-top: 10px;
+  }
+  .sg-header {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-2);
+    text-align: center;
+    padding: 3px 0;
+  }
+  .sg-agent {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-1);
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+  }
+  .sg-cell {
+    height: 22px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .sg-empty { background: var(--bg-3); }
+  .sg-llm   { background: rgba(249,115,22,0.22); color: var(--orange-hi); border: 1px solid rgba(249,115,22,0.35); }
+  .sg-vec   { background: rgba(96,165,250,0.15); color: var(--blue); border: 1px solid rgba(96,165,250,0.3); }
+  .sg-srch  { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+  .sg-out   { background: rgba(167,139,250,0.14); color: #a78bfa; border: 1px solid rgba(167,139,250,0.28); }
+  .sg-conflict { background: rgba(239,68,68,0.2); color: var(--red); border: 1px solid rgba(239,68,68,0.4); position: relative; }
+  .sg-conflict::after {
+    content: '!';
+    position: absolute;
+    top: -3px; right: -2px;
+    font-size: 8px;
+    color: var(--red);
+    font-weight: 700;
+  }
+
+  /* ── Recovery panel ── */
+  .recovery-items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .recovery-item {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .ri-label { font-size: 10px; color: var(--text-2); margin-bottom: 4px; }
+  .ri-val { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--text-0); }
+  .ri-sub { font-size: 9px; font-family: var(--mono); color: var(--text-2); margin-top: 2px; }
+
+  /* ── Step ticker at top ── */
+  .step-ticker {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .step-node {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px;
+    font-family: var(--mono);
+    font-weight: 500;
+    border: 1px solid var(--border-hi);
+    color: var(--text-2);
+    background: var(--bg-2);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .step-node.active {
+    background: var(--orange-core);
+    color: #000;
+    border-color: transparent;
+    box-shadow: 0 0 10px rgba(249,115,22,0.4);
+  }
+  .step-node.done {
+    background: rgba(34,197,94,0.15);
+    border-color: rgba(34,197,94,0.3);
+    color: var(--green);
+  }
+  .step-conn {
+    height: 1px;
+    flex: 1;
+    background: var(--border-hi);
+    max-width: 14px;
+  }
+  .step-tooltip {
+    font-size: 9px;
+    color: var(--text-2);
+    white-space: nowrap;
+  }
+
+
+  /* ── Control deck: policy + LLM graph + chaos ── */
+  .control-deck {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1.05fr 1.4fr 1.05fr;
+    gap: 10px;
+  }
+  .control-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-width: 0;
+  }
+  .control-card-title {
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--text-1); margin-bottom:8px;
+  }
+  .mini-badge {
+    font-family:var(--mono); font-size:8px; padding:2px 6px; border-radius:10px;
+    background:var(--bg-3); color:var(--text-1); border:1px solid var(--border);
+  }
+  .mini-badge.good { color:var(--green); background:rgba(34,197,94,.08); }
+  .mini-badge.warn { color:var(--yellow); background:rgba(234,179,8,.08); }
+  .mini-badge.danger { color:var(--red); background:rgba(239,68,68,.08); }
+  .control-row { display:flex; gap:7px; align-items:center; margin-top:6px; }
+  .control-select, .control-input {
+    width:100%; min-width:0; background:var(--bg-2); color:var(--text-0);
+    border:1px solid var(--border-hi); border-radius:5px; padding:6px 8px;
+    font-family:var(--mono); font-size:9px; outline:none;
+  }
+  .control-input::placeholder { color:var(--text-2); }
+  .mini-btn {
+    background:var(--bg-3); color:var(--text-1); border:1px solid var(--border-hi);
+    border-radius:5px; padding:6px 8px; font-family:var(--mono); font-size:8px;
+    cursor:pointer; white-space:nowrap;
+  }
+  .mini-btn:hover { color:var(--text-0); }
+  .mini-btn.orange { background:var(--orange-core); color:#000; border-color:transparent; font-weight:600; }
+  .mini-btn.red { color:#fff; background:rgba(239,68,68,.22); border-color:rgba(239,68,68,.45); }
+  .mini-btn.green { color:var(--green); border-color:rgba(34,197,94,.35); }
+  .weight-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-top:6px; }
+  .weight-item { min-width:0; }
+  .weight-label { display:flex; justify-content:space-between; font-family:var(--mono); font-size:7px; color:var(--text-2); margin-bottom:2px; }
+  .weight-item input[type=range] { width:100%; accent-color:var(--orange-core); }
+  .graph-preview { display:flex; align-items:center; gap:4px; overflow-x:auto; margin-top:7px; min-height:24px; }
+  .graph-node { font-family:var(--mono); font-size:8px; padding:3px 6px; border-radius:4px; background:var(--orange-glow); color:var(--orange-hi); border:1px solid rgba(249,115,22,.22); white-space:nowrap; }
+  .graph-arrow { color:var(--text-2); font-size:9px; }
+  .tiny-note { font-family:var(--mono); font-size:8px; color:var(--text-2); margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chaos-status { font-family:var(--mono); font-size:8px; color:var(--text-2); margin-top:6px; }
+  @media (max-width: 1100px) {
+    .control-deck { grid-template-columns:1fr; }
+    .content { overflow:auto; }
+  }
+
+  /* scrollbar for main body */
+  .content::-webkit-scrollbar { display: none; }
+
+  /* ── Animate in ── */
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .anim-in { animation: fadein 0.35s ease forwards; }
+
+  /* sim running flash */
+  @keyframes rowflash {
+    0%, 100% { background: transparent; }
+    50% { background: rgba(249,115,22,0.05); }
+  }
+  .agent-running-row { animation: rowflash 2.2s ease-in-out infinite; }
+
+  .auth-user {
+    display:flex; align-items:center; gap:7px;
+    font-family:var(--mono); font-size:9px; color:var(--text-1);
+    max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .auth-lock { color:var(--green); font-size:11px; }
+  .logout-btn {
+    font-family:var(--mono); font-size:9px; padding:4px 8px; border-radius:5px;
+    border:1px solid var(--border-hi); background:var(--bg-2); color:var(--text-1); cursor:pointer;
+  }
+  .logout-btn:hover { color:var(--text-0); background:var(--bg-3); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo-mark">
+        <svg viewBox="0 0 16 16"><path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z" fill-rule="evenodd"/></svg>
+      </div>
+      <div>
+        <div class="product-name">PRAMARC</div>
+        <div class="product-sub">Predictive Risk-Aware Multi-Agent Resource Controller</div>
+      </div>
+      <div class="topbar-divider"></div>
+      <div class="role-badge">Person 4 · Shadow &amp; Recovery</div>
+    </div>
+    <div class="topbar-right">
+      <div class="step-ticker" title="Pipeline stages">
+        <div class="step-node done" title="Service Graph">1</div><div class="step-conn"></div>
+        <div class="step-node done" title="Priority + Forecast">2</div><div class="step-conn"></div>
+        <div class="step-node done" title="Reservation Scoring">3</div><div class="step-conn"></div>
+        <div class="step-node done" title="Allocation">4</div><div class="step-conn"></div>
+        <div class="step-node active" title="Shadow Execution">5</div><div class="step-conn"></div>
+        <div class="step-node active" title="Execute + Recovery">6</div><div class="step-conn"></div>
+        <div class="step-node" title="Ledger Release">7</div>
+      </div>
+      <div class="topbar-divider"></div>
+      <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+      <div class="tick-counter">Tick <span id="tick-display">0</span> / 30</div>
+      <div class="topbar-divider"></div>
+      <div class="auth-user" title="Authenticated PRAMARC account"><span class="auth-lock">●</span><span id="auth-email">verified</span></div>
+      <button class="logout-btn" onclick="logoutPRAMARC()">Logout</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="nav-section-label">My Modules</div>
+    <div class="nav-item active">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
+      Shadow Execution
+      <span class="nav-badge orange" id="conflict-badge">0</span>
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10h12M4 6h8M4 14h10"/></svg>
+      Recovery Hierarchy
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+      Metrics &amp; Feedback
+    </div>
+
+    <div class="nav-section-label">Upstream</div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="10" r="2"/><circle cx="15" cy="5" r="2"/><circle cx="15" cy="15" r="2"/><path d="M7 9l6-3M7 11l6 3"/></svg>
+      Service Graph
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-8 4 3 4-9"/></svg>
+      Demand Forecast
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v14M3 10h14"/><circle cx="10" cy="10" r="3"/></svg>
+      Reservation Engine
+    </div>
+
+    <div class="sidebar-spacer"></div>
+    <div class="system-info">
+      <div class="sysinfo-row"><span>Agents total</span><span>8</span></div>
+      <div class="sysinfo-row"><span>Resources</span><span>5</span></div>
+      <div class="sysinfo-row"><span>Sim depth</span><span>5 steps</span></div>
+      <div class="sysinfo-row"><span>Version</span><span>1.0.0</span></div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Shadow Execution Console</div>
+        <div class="section-desc">5-step lookahead simulation across all agents · conflict detection · recovery coordination</div>
+      </div>
+      <div class="header-controls">
+        <button class="ctrl-btn" onclick="resetSim()">Reset</button>
+        <button class="ctrl-btn" id="run-btn" onclick="toggleSim()">Run Simulation</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Interactive control deck -->
+      <div class="control-deck anim-in">
+        <div class="control-card">
+          <div class="control-card-title">
+            <span>Priority Policy</span>
+            <span class="mini-badge" id="policy-badge">BALANCED</span>
+          </div>
+          <select class="control-select" id="policy-select" onchange="setPolicy(this.value)">
+            <option value="balanced">Balanced · original 40/30/20/10</option>
+            <option value="deadline_first">Deadline First</option>
+            <option value="business_first">Business / Importance First</option>
+            <option value="fairness_first">Fairness / Waiting First</option>
+            <option value="contention_first">Contention First</option>
+            <option value="custom">Custom weights</option>
+          </select>
+          <div class="weight-grid">
+            <div class="weight-item"><div class="weight-label"><span>WAIT</span><span id="wv-wait">40</span></div><input id="w-wait" type="range" min="0" max="100" value="40" oninput="customWeightChanged()"></div>
+            <div class="weight-item"><div class="weight-label"><span>IMPORT.</span><span id="wv-importance">30</span></div><input id="w-importance" type="range" min="0" max="100" value="30" oninput="customWeightChanged()"></div>
+            <div class="weight-item"><div class="weight-label"><span>DEADLINE</span><span id="wv-deadline">20</span></div><input id="w-deadline" type="range" min="0" max="100" value="20" oninput="customWeightChanged()"></div>
+            <div class="weight-item"><div class="weight-label"><span>CONTEND</span><span id="wv-contention">10</span></div><input id="w-contention" type="range" min="0" max="100" value="10" oninput="customWeightChanged()"></div>
+          </div>
+          <div class="tiny-note" id="policy-note">User decides what “priority” means.</div>
+        </div>
+
+        <div class="control-card">
+          <div class="control-card-title">
+            <span>LLM Service Graph Builder</span>
+            <span class="mini-badge warn" id="llm-badge">CHECKING</span>
+          </div>
+          <div class="control-row">
+            <input class="control-input" id="task-input" placeholder="e.g. Research AI news, compare internal docs and generate a report">
+            <button class="mini-btn orange" onclick="generateServiceGraph()">Generate</button>
+            <button class="mini-btn" onclick="addGeneratedAgent()">Add Agent</button>
+          </div>
+          <div class="graph-preview" id="graph-preview"><span class="tiny-note">Task → LLM planner → validated resource graph. Offline fallback is automatic.</span></div>
+          <div class="tiny-note" id="graph-source">No graph generated yet.</div>
+        </div>
+
+        <div class="control-card">
+          <div class="control-card-title">
+            <span>Chaos Mode</span>
+            <span class="mini-badge" id="chaos-badge">ARMED</span>
+          </div>
+          <div class="control-row">
+            <select class="control-select" id="chaos-resource">
+              <option value="llm-api">LLM API</option>
+              <option value="vector-db">Vector DB</option>
+              <option value="search-api">Search API</option>
+              <option value="output-api">Output API</option>
+            </select>
+            <button class="mini-btn red" onclick="injectChaos('failure')">FAIL 3 TICKS</button>
+            <button class="mini-btn" onclick="injectChaos('capacity')">CAPACITY → 1</button>
+            <button class="mini-btn green" onclick="restoreAllChaos()">RESTORE</button>
+          </div>
+          <div class="chaos-status" id="chaos-status">No active fault. Trigger while simulation is running.</div>
+        </div>
+      </div>
+
+      <!-- Stat row -->
+      <div class="stat-row anim-in">
+        <div class="stat-card highlight">
+          <div class="stat-label">Conflicts caught</div>
+          <div class="stat-value orange" id="stat-conflicts">0</div>
+          <div class="stat-sub">by shadow sim</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Agents running</div>
+          <div class="stat-value" id="stat-running">8</div>
+          <div class="stat-sub" id="stat-running-sub">of 8 active</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value green" id="stat-done">0</div>
+          <div class="stat-sub">workflows done</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Degraded routes</div>
+          <div class="stat-value yellow" id="stat-degraded">0</div>
+          <div class="stat-sub">fallback used</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Failure rate</div>
+          <div class="stat-value red" id="stat-failrate">0.000</div>
+          <div class="stat-sub" id="stat-failrate-sub"><span class="up">↓ vs greedy</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Wasted reserv.</div>
+          <div class="stat-value" id="stat-wasted">0.000</div>
+          <div class="stat-sub">soft TTL ratio</div>
+        </div>
+      </div>
+
+      <!-- Left panel -->
+      <div class="left-panel">
+        <!-- Agent table -->
+        <div class="panel" style="min-height: 260px; max-height: 300px;">
+          <div class="panel-head">
+            <div class="panel-title">
+              <div class="panel-title-dot"></div>
+              Agent Status Table
+            </div>
+            <div style="font-size:9px; color:var(--text-2); font-family:var(--mono);">Priority · Lock · Progress</div>
+          </div>
+          <div class="panel-body">
+            <table class="agent-table" id="agent-table">
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>Status</th>
+                  <th>Resource</th>
+                  <th>Lock</th>
+                  <th>Priority</th>
+                  <th>Progress</th>
+                </tr>
+              </thead>
+              <tbody id="agent-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Shadow sim viz -->
+        <div class="shadow-viz">
+          <div class="panel-title" style="margin-bottom:2px;">
+            <div class="panel-title-dot"></div>
+            Shadow Simulation Map
+            <span style="font-size:9px; color:var(--text-2); font-family:var(--mono); margin-left:6px;">next 5 steps · red = conflict</span>
+          </div>
+          <div class="shadow-grid" id="shadow-grid"></div>
+        </div>
+
+        <!-- Recovery items -->
+        <div class="panel" style="flex: 0 0 auto;">
+          <div class="panel-head">
+            <div class="panel-title"><div class="panel-title-dot"></div>Recovery Hierarchy</div>
+          </div>
+          <div style="padding: 12px 14px;">
+            <div class="recovery-items">
+              <div class="recovery-item">
+                <div class="ri-label">Graceful degradations</div>
+                <div class="ri-val" id="rc-degrade">0</div>
+                <div class="ri-sub">rerouted to fallback</div>
+              </div>
+              <div class="recovery-item">
+                <div class="ri-label">Checkpoints saved</div>
+                <div class="ri-val" id="rc-checkpoints">0</div>
+                <div class="ri-sub">resume-on-free</div>
+              </div>
+              <div class="recovery-item">
+                <div class="ri-label">Anti-starvation bumps</div>
+                <div class="ri-val" id="rc-starvation">0</div>
+                <div class="ri-sub">priority escalations</div>
+              </div>
+              <div class="recovery-item">
+                <div class="ri-label">Avg wait time</div>
+                <div class="ri-val" id="rc-wait">0.0</div>
+                <div class="ri-sub">ticks per agent</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right panel -->
+      <div class="right-panel">
+        <!-- Comparison -->
+        <div class="metric-panel">
+          <div class="panel-title" style="margin-bottom:12px;">
+            <div class="panel-title-dot"></div>
+            Baseline Comparison
+          </div>
+          <div class="bar-compare">
+            <div class="bar-side">
+              <div class="bar-side-label">GREEDY</div>
+              <div class="bar-track"><div class="bar-fill bad" id="bar-greedy" style="width:62%"></div></div>
+              <div class="bar-caption red" id="val-greedy">0.625</div>
+            </div>
+            <div class="bar-side">
+              <div class="bar-side-label">PRAMARC</div>
+              <div class="bar-track"><div class="bar-fill good" id="bar-pramarc" style="width:0%"></div></div>
+              <div class="bar-caption orange" id="val-pramarc" style="color:var(--orange-hi)">—</div>
+            </div>
+          </div>
+          <div style="margin-top:12px; font-size:10px; color:var(--text-2); font-family:var(--mono);">
+            Improvement: <span id="improvement" style="color:var(--orange-core); font-weight:500;">—</span>
+          </div>
+        </div>
+
+        <!-- Conflict log -->
+        <div class="log-panel" style="flex:1; min-height:0;">
+          <div class="panel-head" style="flex-shrink:0;">
+            <div class="panel-title"><div class="panel-title-dot"></div>Event Log</div>
+            <div style="font-size:9px; color:var(--text-2); font-family:var(--mono);" id="log-count">0 events</div>
+          </div>
+          <div class="log-body" id="log-body"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+/* PRAMARC v1.0 interactive demo — policy, LLM graph, chaos recovery */
+const RESOURCES=["llm-api","vector-db","search-api","output-api","llm-api-backup"];
+const RESOURCE_CAPACITY={"llm-api":3,"vector-db":2,"search-api":2,"output-api":2,"llm-api-backup":2};
+const RESOURCE_CRITICALITY={"llm-api":0.9,"vector-db":0.7,"search-api":0.5,"output-api":0.4,"llm-api-backup":0.6};
+const RESOURCE_FAILURE_RISK={"llm-api":0.2,"vector-db":0.1,"search-api":0.15,"output-api":0.05,"llm-api-backup":0.25};
+const FALLBACK={"llm-api":"llm-api-backup"};
+const STARVATION_THRESHOLD=5;
+const POLICY_PRESETS={
+  balanced:{wait:.40,importance:.30,deadline:.20,contention:.10},
+  deadline_first:{wait:.20,importance:.20,deadline:.50,contention:.10},
+  business_first:{wait:.15,importance:.60,deadline:.15,contention:.10},
+  fairness_first:{wait:.60,importance:.15,deadline:.10,contention:.15},
+  contention_first:{wait:.30,importance:.15,deadline:.15,contention:.40}
+};
+
+let policyName="balanced", policyWeights={...POLICY_PRESETS.balanced};
+let lastGeneratedGraph=null, chaosEvents={};
+
+function baseAgentTemplates(){
+  return [
+    {name:"Agent-A",steps:["llm-api","vector-db","llm-api","output-api"],importance:.9,deadline:8},
+    {name:"Agent-B",steps:["search-api","llm-api","vector-db"],importance:.7,deadline:10},
+    {name:"Agent-C",steps:["llm-api","llm-api","output-api"],importance:.5,deadline:12},
+    {name:"Agent-D",steps:["vector-db","search-api","llm-api"],importance:.8,deadline:6},
+    {name:"Agent-E",steps:["llm-api","vector-db","search-api","output-api"],importance:.6,deadline:9},
+    {name:"Agent-F",steps:["search-api","vector-db","llm-api"],importance:.4,deadline:15},
+    {name:"Agent-G",steps:["llm-api","output-api"],importance:1,deadline:3},
+    {name:"Agent-H",steps:["vector-db","llm-api","output-api","search-api"],importance:.3,deadline:20}
+  ];
+}
+function hydrateAgent(a){return {...a,current_step:0,status:"running",wait_time:0,checkpoint:null,priority:0,lock_type:"watch",reserved_resource:null,degraded_count:0,checkpoint_count:0,starvation_bumps:0,prediction_confidence:a.prediction_confidence||{}};}
+function makeAgents(){return baseAgentTemplates().map(hydrateAgent);}
+function makeLedger(){
+  const r={};
+  for(const k of RESOURCES) r[k]={state:"free",owners:[],ttl:0,total_capacity:RESOURCE_CAPACITY[k],capacity_limit:RESOURCE_CAPACITY[k],health:"up"};
+  return {resources:r,soft_made:0,soft_wasted:0};
+}
+function capacity(r){ if(r.health==="down") return 0; return Math.max(0,r.capacity_limit-r.owners.length); }
+
+let agents,ledger,tick,simInterval,running;
+let totalConflicts=0,totalDegraded=0,totalCheckpoints=0,totalStarvation=0,totalChaosRecoveries=0;
+let logEntries=[];
+
+function normalizeWeights(w){const keys=["wait","importance","deadline","contention"];const vals={};let total=0;for(const k of keys){vals[k]=Math.max(0,+w[k]||0);total+=vals[k];}if(total<=0)return {...POLICY_PRESETS.balanced};for(const k of keys)vals[k]/=total;return vals;}
+function setPolicy(name){
+  policyName=name;
+  if(name!=="custom"){
+    policyWeights={...POLICY_PRESETS[name]};
+    setSliderValues(policyWeights);
+  } else customWeightChanged(false);
+  document.getElementById('policy-badge').textContent=name.replaceAll('_',' ').toUpperCase();
+  addLog("POLICY",`Priority policy → ${name}`);
+  updateUI();
+}
+function setSliderValues(w){for(const k of ["wait","importance","deadline","contention"]){const v=Math.round(w[k]*100);document.getElementById('w-'+k).value=v;document.getElementById('wv-'+k).textContent=v;}}
+function customWeightChanged(forceCustom=true){
+  const w={};for(const k of ["wait","importance","deadline","contention"]){const el=document.getElementById('w-'+k);document.getElementById('wv-'+k).textContent=el.value;w[k]=+el.value;}
+  policyWeights=normalizeWeights(w);
+  if(forceCustom){policyName="custom";document.getElementById('policy-select').value='custom';document.getElementById('policy-badge').textContent='CUSTOM';}
+  document.getElementById('policy-note').textContent=`wait ${Math.round(policyWeights.wait*100)}% · importance ${Math.round(policyWeights.importance*100)}% · deadline ${Math.round(policyWeights.deadline*100)}% · contention ${Math.round(policyWeights.contention*100)}%`;
+}
+
+function resetSim(){
+  clearInterval(simInterval);running=false;document.getElementById('run-btn').textContent='Run Simulation';
+  agents=makeAgents();ledger=makeLedger();tick=0;chaosEvents={};
+  totalConflicts=0;totalDegraded=0;totalCheckpoints=0;totalStarvation=0;totalChaosRecoveries=0;logEntries=[];
+  document.getElementById('stat-failrate').textContent='0.000';document.getElementById('stat-wasted').textContent='0.000';
+  document.getElementById('chaos-status').textContent='No active fault. Trigger while simulation is running.';
+  document.getElementById('chaos-badge').textContent='ARMED';document.getElementById('chaos-badge').className='mini-badge';
+  updateUI();
+}
+function toggleSim(){if(running){clearInterval(simInterval);running=false;document.getElementById('run-btn').textContent='Resume';}else{running=true;document.getElementById('run-btn').textContent='Pause';simInterval=setInterval(simTick,900);}}
+function currentResource(a){return a.current_step<a.steps.length?a.steps[a.current_step]:null;}
+function futureSteps(a,n=5){return a.steps.slice(a.current_step,a.current_step+n);}
+function advance(a){a.current_step++;a.reserved_resource=null;if(a.current_step>=a.steps.length)a.status="done";}
+function confidenceFor(a){const res=currentResource(a);if(!res)return .8;let occ=-1;for(let i=0;i<=a.current_step;i++)if(a.steps[i]===res)occ++;return +(a.prediction_confidence[`${res}#${occ}`]??.8);}
+function priorityScore(a,all){
+  const wait=Math.min(a.wait_time/10,1),imp=Math.max(0,Math.min(1,a.importance)),du=Math.min(1/Math.max(a.deadline-a.wait_time,1),1);
+  const active=all.filter(x=>x.name!==a.name&&["running","waiting"].includes(x.status));
+  const dep=active.length?Math.min(active.filter(x=>currentResource(x)===currentResource(a)&&currentResource(a)!=null).length/active.length,1):0;
+  const w=policyWeights;return +((w.wait*wait)+(w.importance*imp)+(w.deadline*du)+(w.contention*dep)).toFixed(3);
+}
+function reservationScore(conf,crit,fail,pri){let effective=conf<.7?Math.min(1,conf+.15):conf;return +((effective*crit*(1-fail)*pri)).toFixed(3);}
+function getLockType(s){return s>=.45?"hard":s>=.15?"soft":"watch";}
+
+function ledgerReserve(resource,name,lockType){
+  if(lockType==="watch")return false;const r=ledger.resources[resource];if(!r||capacity(r)<=0)return false;
+  r.owners.push({name,lockType,ttl:lockType==="soft"?5:999});r.state=lockType;if(lockType==="soft")ledger.soft_made++;return true;
+}
+function ledgerRelease(resource,name,used=true){
+  const r=ledger.resources[resource];if(!r)return false;const i=r.owners.findIndex(x=>x.name===name);if(i<0)return false;const o=r.owners[i];if(o.lockType==="soft"&&!used)ledger.soft_wasted++;r.owners.splice(i,1);r.state=r.owners.length?(r.owners.some(x=>x.lockType==="hard")?"hard":"soft"):(r.health==="down"?"down":"free");return true;
+}
+function ledgerTick(){for(const k of RESOURCES){const r=ledger.resources[k];const keep=[];for(const o of r.owners){if(o.lockType!=="soft"){keep.push(o);continue;}o.ttl--;if(o.ttl<=0)ledger.soft_wasted++;else keep.push(o);}r.owners=keep;if(!keep.length)r.state=r.health==="down"?"down":"free";}}
+function effectiveCapacity(resource,offset=0){const r=ledger.resources[resource];const ev=chaosEvents[resource];if(ev&&ev.active&&(tick+offset)<ev.endTick)return ev.kind==="failure"?0:ev.limit;return r.total_capacity;}
+
+function shadowExecute(){
+  const future={};for(const a of agents){if(!["running","waiting"].includes(a.status))continue;futureSteps(a,5).forEach((res,si)=>{const key=si+"::"+res;(future[key]??=[]).push(a);});}
+  let cf=0;for(const [key,arr] of Object.entries(future)){const [siS,res]=key.split("::"),si=+siS,cap=effectiveCapacity(res,si);if(arr.length<=cap)continue;const ranked=[...arr].sort((x,y)=>y.priority-x.priority);const winners=ranked.slice(0,cap).map(a=>a.name).join(', ')||'none';for(const loser of ranked.slice(cap)){addLog("CONFLICT",`S+${si+1} ${res}: demand ${arr.length} > cap ${cap}; ${loser.name} delayed (winner ${winners})`);cf++;}}
+  totalConflicts+=cf;return cf;
+}
+
+function processChaosRecovery(){
+  for(const [res,ev] of Object.entries(chaosEvents)){if(ev.active&&tick>=ev.endTick){const r=ledger.resources[res];r.health="up";r.capacity_limit=ev.previousLimit;ev.active=false;totalChaosRecoveries++;addLog("RECOVER",`${res} restored automatically`);}}
+  updateChaosStatus();
+}
+function injectChaos(kind){
+  const res=document.getElementById('chaos-resource').value,r=ledger.resources[res];
+  if(chaosEvents[res]?.active){addLog("CHAOS",`${res} already has an active fault`);return;}
+  const ev={kind,startTick:tick,endTick:tick+3,previousLimit:r.capacity_limit,active:true,limit:1};chaosEvents[res]=ev;
+  if(kind==="failure"){r.health="down";r.capacity_limit=0;r.state="down";addLog("CHAOS",`${res} FORCED DOWN for 3 ticks`);}else{r.health="degraded";r.capacity_limit=Math.min(1,r.total_capacity);addLog("CHAOS",`${res} capacity squeezed ${r.total_capacity} → ${r.capacity_limit} for 3 ticks`);}
+  document.getElementById('chaos-badge').textContent='FAULT ACTIVE';document.getElementById('chaos-badge').className='mini-badge danger';updateChaosStatus();updateUI();
+}
+function restoreAllChaos(){for(const [res,ev] of Object.entries(chaosEvents)){if(ev.active){const r=ledger.resources[res];r.health="up";r.capacity_limit=ev.previousLimit;ev.active=false;addLog("RECOVER",`${res} manually restored`);}}updateChaosStatus();updateUI();}
+function updateChaosStatus(){const active=Object.entries(chaosEvents).filter(([,e])=>e.active);const el=document.getElementById('chaos-status');const badge=document.getElementById('chaos-badge');if(!active.length){el.textContent=`Stable · ${totalChaosRecoveries} chaos recovery event(s)`;badge.textContent='STABLE';badge.className='mini-badge good';return;}el.textContent=active.map(([r,e])=>`${r}: ${e.kind} until T${e.endTick}`).join(' · ');}
+
+function simTick(){
+  if(tick>=30||agents.every(a=>["done","failed"].includes(a.status))){if(tick>=30){for(const a of agents){if(!["done","failed"].includes(a.status)){a.status="failed";addLog("TIMEOUT",`${a.name} missed the 30-tick simulation SLA`);}}}clearInterval(simInterval);running=false;document.getElementById('run-btn').textContent='Simulation Complete';updateUI();finalizeMetrics();return;}
+  tick++;ledgerTick();processChaosRecovery();
+
+  // WATCH is also waiting in practice, so protect any unfinished agent from starvation.
+  for(const a of agents){if(["running","waiting"].includes(a.status)&&a.wait_time>=STARVATION_THRESHOLD&&a.wait_time%STARVATION_THRESHOLD===0){const old=a.importance;a.importance=Math.min(a.importance+.15,1);if(a.importance>old){a.starvation_bumps++;totalStarvation++;addLog("STARVATION",`${a.name} importance ${old.toFixed(2)} → ${a.importance.toFixed(2)}`);}}}
+  for(const a of agents)if(a.status==="waiting")a.status="running";
+
+  for(const a of agents)if(["running","waiting"].includes(a.status))a.priority=priorityScore(a,agents);
+  shadowExecute();
+
+  // Priority now genuinely controls execution order.
+  const runnable=agents.filter(a=>a.status==="running").sort((a,b)=>b.priority-a.priority||a.name.localeCompare(b.name));
+  for(const a of runnable){
+    const res=currentResource(a);if(!res){a.status="done";continue;}
+    const conf=confidenceFor(a),crit=RESOURCE_CRITICALITY[res]||.5,frisk=RESOURCE_FAILURE_RISK[res]||.1,rscore=reservationScore(conf,crit,frisk,a.priority),lock=getLockType(rscore);a.lock_type=lock;
+    if(lock==="watch"){a.wait_time++;continue;}
+    if(ledgerReserve(res,a.name,lock)){a.reserved_resource=res;advance(a);ledgerRelease(res,a.name,true);continue;}
+    const fb=FALLBACK[res];
+    if(fb&&capacity(ledger.resources[fb])>0&&ledgerReserve(fb,a.name,lock==="hard"?"soft":lock)){a.reserved_resource=fb;advance(a);ledgerRelease(fb,a.name,true);a.degraded_count++;totalDegraded++;addLog("DEGRADED",`${a.name}: ${res} unavailable → ${fb}`);continue;}
+    a.checkpoint=a.current_step;a.status="waiting";a.wait_time++;a.checkpoint_count++;totalCheckpoints++;addLog("CHECKPOINT",`${a.name} saved at step ${a.current_step}; ${res} unavailable`);
+  }
+  updateUI();
+}
+
+function runGreedyBaseline(templates){
+  const gs=templates.map(a=>({steps:[...a.steps],i:0,status:'running'}));let failures=0;
+  for(let t=0;t<30;t++){const held={};for(const a of gs){if(a.status!=='running')continue;const res=a.i<a.steps.length?a.steps[a.i]:null;if(!res){a.status='done';continue;}const used=held[res]||0;if(used<1){held[res]=used+1;a.i++;if(a.i>=a.steps.length)a.status='done';}else{a.status='failed';failures++;}}if(gs.every(a=>a.status!=='running'))break;}
+  return failures/gs.length;
+}
+function finalizeMetrics(){
+  const total=agents.length,failed=agents.filter(a=>a.status==="failed").length,fr=failed/total,wr=ledger.soft_made?ledger.soft_wasted/ledger.soft_made:0,greedy=runGreedyBaseline(agents),pct=(greedy-fr)*100;
+  document.getElementById('stat-failrate').textContent=fr.toFixed(3);document.getElementById('stat-wasted').textContent=wr.toFixed(3);
+  document.getElementById('val-pramarc').textContent=fr.toFixed(3);document.getElementById('bar-pramarc').style.width=(fr*100)+"%";
+  document.getElementById('val-greedy').textContent=greedy.toFixed(3);document.getElementById('bar-greedy').style.width=(greedy*100)+"%";
+  document.getElementById('improvement').textContent=pct.toFixed(1)+" percentage points";
+}
+function addLog(type,msg){logEntries.unshift({type,msg,tick});if(logEntries.length>150)logEntries.pop();}
+
+function updateUI(){
+  document.getElementById('tick-display').textContent=tick;
+  const runningCount=agents.filter(a=>a.status==="running").length,doneCount=agents.filter(a=>a.status==="done").length;
+  document.getElementById('stat-conflicts').textContent=totalConflicts;document.getElementById('stat-running').textContent=runningCount;document.getElementById('stat-running-sub').textContent=`of ${agents.length} active`;
+  document.getElementById('stat-done').textContent=doneCount;document.getElementById('stat-degraded').textContent=totalDegraded;document.getElementById('conflict-badge').textContent=totalConflicts;
+  document.getElementById('rc-degrade').textContent=totalDegraded;document.getElementById('rc-checkpoints').textContent=totalCheckpoints;document.getElementById('rc-starvation').textContent=totalStarvation;document.getElementById('rc-wait').textContent=(agents.reduce((s,a)=>s+a.wait_time,0)/agents.length).toFixed(1);
+
+  const tbody=document.getElementById('agent-tbody');tbody.innerHTML='';
+  for(const a of [...agents].sort((a,b)=>b.priority-a.priority)){const res=currentResource(a),pct=Math.round(a.current_step/a.steps.length*100),chipClass={running:'chip-running',done:'chip-done',waiting:'chip-waiting',failed:'chip-failed'}[a.status]||'chip-running',lockClass={hard:'lock-hard',soft:'lock-soft',watch:'lock-watch'}[a.lock_type]||'lock-none',fillClass=a.status==='done'?'green-fill':a.status==='waiting'?'yellow-fill':'',rowClass=a.status==='running'?'agent-running-row':'';tbody.innerHTML+=`<tr class="${rowClass}"><td><span class="agent-name">${a.name}</span></td><td><span class="status-chip ${chipClass}">${a.status}</span></td><td>${res?`<span class="resource-tag">${res}</span>`:`<span style="color:var(--text-2);font-size:9px">—</span>`}</td><td><span class="lock-chip ${lockClass}">${a.lock_type||'—'}</span></td><td><span class="prio-val">${a.priority.toFixed(3)}</span></td><td><div class="prog-bar"><div class="prog-fill ${fillClass}" style="width:${pct}%"></div></div><div style="font-family:var(--mono);font-size:8px;color:var(--text-2);margin-top:2px">${a.current_step}/${a.steps.length}</div></td></tr>`;}
+
+  const grid=document.getElementById('shadow-grid'),steps=['S+1','S+2','S+3','S+4','S+5'],colorMap={'llm-api':'sg-llm','vector-db':'sg-vec','search-api':'sg-srch','output-api':'sg-out','llm-api-backup':'sg-llm'},shortMap={'llm-api':'LLM','vector-db':'VEC','search-api':'SCH','output-api':'OUT','llm-api-backup':'LLM↩'};
+  const conflictKeys=new Set(),futureMap={};for(const a of agents){if(!["running","waiting"].includes(a.status))continue;futureSteps(a,5).forEach((res,si)=>{const k=si+'::'+res;(futureMap[k]??=[]).push(a.name);});}for(const [k,arr] of Object.entries(futureMap)){const [si,res]=k.split('::');if(arr.length>effectiveCapacity(res,+si))conflictKeys.add(k);}
+  let html='<div></div>'+steps.map(x=>`<div class="sg-header">${x}</div>`).join('');for(const a of agents.filter(a=>["running","waiting"].includes(a.status)).slice(0,7)){html+=`<div class="sg-agent">${a.name}</div>`;const fs=futureSteps(a,5);for(let si=0;si<5;si++){const res=fs[si];if(!res){html+='<div class="sg-cell sg-empty"></div>';continue;}const k=si+'::'+res,isConflict=conflictKeys.has(k),cls=isConflict?'sg-conflict':(colorMap[res]||'sg-empty');html+=`<div class="sg-cell ${cls}">${shortMap[res]||res.slice(0,3).toUpperCase()}</div>`;}}grid.innerHTML=html;
+
+  const logBody=document.getElementById('log-body');document.getElementById('log-count').textContent=logEntries.length+' events';const cm={CONFLICT:'log-conflict',DEGRADED:'log-degraded',STARVATION:'log-starvation',CHECKPOINT:'log-checkpoint',CHAOS:'log-conflict',RECOVER:'log-degraded',POLICY:'log-starvation',LLM:'log-degraded'};logBody.innerHTML=logEntries.slice(0,60).map(e=>`<div class="log-entry"><span class="log-time">T${e.tick.toString().padStart(2,'0')}</span><span class="log-type ${cm[e.type]||''}">${e.type}</span><span class="log-msg">${e.msg}</span></div>`).join('');
+}
+
+function localGraph(task){const t=task.toLowerCase(),steps=[],conf={};const add=(r,c)=>{const idx=steps.filter(x=>x===r).length;steps.push(r);conf[`${r}#${idx}`]=c;};if(/search|research|latest|news|web|find|compare/.test(t))add('search-api',.90);if(/internal|document|docs|knowledge|semantic|memory|database|vector/.test(t))add('vector-db',.82);add('llm-api',.88);if(/verify|cross-check|compare/.test(t)&&!steps.includes('vector-db')){add('vector-db',.68);add('llm-api',.78);}add('output-api',.92);return {task,steps,confidences:conf,source:'browser-offline-heuristic',online:false};}
+async function generateServiceGraph(){
+  const task=document.getElementById('task-input').value.trim();if(!task){document.getElementById('task-input').focus();return;}
+  const badge=document.getElementById('llm-badge');badge.textContent='PLANNING';badge.className='mini-badge warn';let data;
+  try{const r=await fetch('/api/service-graph',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task})});if(!r.ok)throw new Error('backend unavailable');data=await r.json();}
+  catch(e){data=localGraph(task);}
+  lastGeneratedGraph=data;renderGraph(data);addLog('LLM',`Service Graph generated via ${data.source}`);updateUI();
+}
+function renderGraph(data){const p=document.getElementById('graph-preview');p.innerHTML=data.steps.map((x,i)=>`${i?'<span class="graph-arrow">→</span>':''}<span class="graph-node">${x}</span>`).join('');const badge=document.getElementById('llm-badge');badge.textContent=data.online?'LLM ONLINE':'OFFLINE SAFE';badge.className='mini-badge '+(data.online?'good':'warn');document.getElementById('graph-source').textContent=`Source: ${data.source} · ${data.steps.length} predicted resource steps${data.error?' · '+data.error:''}`;}
+function addGeneratedAgent(){if(!lastGeneratedGraph){generateServiceGraph();return;}const idx=agents.filter(a=>a.name.startsWith('Agent-LLM')).length+1;agents.push(hydrateAgent({name:`Agent-LLM-${idx}`,steps:[...lastGeneratedGraph.steps],importance:.75,deadline:Math.max(6,lastGeneratedGraph.steps.length+3),prediction_confidence:{...lastGeneratedGraph.confidences},task:lastGeneratedGraph.task}));addLog('LLM',`Agent-LLM-${idx} added from generated Service Graph`);updateUI();}
+async function checkBackend(){try{const r=await fetch('/api/health');const d=await r.json();const b=document.getElementById('llm-badge');b.textContent=d.llm_configured?'LLM READY':'OFFLINE SAFE';b.className='mini-badge '+(d.llm_configured?'good':'warn');}catch(e){const b=document.getElementById('llm-badge');b.textContent='OFFLINE SAFE';b.className='mini-badge warn';}}
+async function loadAuthStatus(){try{const r=await fetch('/api/auth/status',{cache:'no-store'});const d=await r.json();if(!d.authenticated){location.href='/login.html';return;}document.getElementById('auth-email').textContent=d.email||'signed in';}catch(e){location.href='/login.html';}}
+async function logoutPRAMARC(){try{await fetch('/api/auth/logout',{method:'POST'});}finally{location.href='/login.html';}}
+
+setSliderValues(policyWeights);customWeightChanged(false);resetSim();loadAuthStatus();checkBackend();
+</script>
+</body>
+</html>
